@@ -7,9 +7,9 @@ The sample app's main view controller that manages the scanning process.
 
 import UIKit
 import RoomPlan
-
+import RealmSwift
 class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, RoomCaptureSessionDelegate {
-    
+    let realm = try! Realm()
     @IBOutlet var exportButton: UIButton?
     
     @IBOutlet var doneButton: UIBarButtonItem?
@@ -21,10 +21,19 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
     private var roomCaptureSessionConfig: RoomCaptureSession.Configuration = RoomCaptureSession.Configuration()
     
     private var finalResults: CapturedRoom?
+    var allRooms: Results<Room>?
+    var finalUrl: URL?
+    var isExport = false
+    
+    // AlertTextFields
+    var roomNameTextField: UITextField!
+    var addressTextField: UITextField!
+    var descriptionTextField: UITextField!
+    var clientTextField: UITextField!
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        print("its final result\n\n\n",finalUrl ?? "nil")
         // Set up after loading the view.
         setupRoomCaptureView()
     }
@@ -71,8 +80,71 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
         finalResults = processedResult
     }
     
+    // Alert with information
     @IBAction func doneScanning(_ sender: UIBarButtonItem) {
-        if isScanning { stopSession() } else { cancelScanning(sender) }
+        if isScanning { stopSession()
+            doneButton?.title = "Add to gallery"
+        } else if doneButton?.title == "Close" {
+            cancelScanning(sender)
+        } else {
+            if isExport == false {
+                let alertController = UIAlertController(title: "Warning", message: "You can add to gallery your scan only after export it!", preferredStyle: .alert)
+                let cancelAction = UIAlertAction(title: "Ok", style: .cancel, handler: nil)
+                alertController.addAction(cancelAction)
+                present(alertController, animated: true, completion: nil)
+            } else {
+                let alertController = UIAlertController(title: "Enter information", message: nil, preferredStyle: .alert)
+                alertController.addTextField { (textField) in
+                    textField.placeholder = "Name"
+                    self.roomNameTextField = textField
+                }
+                alertController.addTextField { (textField) in
+                    textField.placeholder = "Client"
+                    self.clientTextField = textField
+                }
+                alertController.addTextField { (textField) in
+                    textField.placeholder = "Adress"
+                    self.addressTextField = textField
+                }
+                alertController.addTextField { (textField) in
+                    textField.placeholder = "Description"
+                    self.descriptionTextField = textField
+                }
+                // Save data
+                let doneAction = UIAlertAction(title: "Save", style: .default) { _ in
+                    // Получаем значения из текстовых полей
+                    if let roomName = self.roomNameTextField.text,
+                       let address = self.addressTextField.text,
+                       let description = self.descriptionTextField.text,
+                       let client = self.clientTextField.text {
+                        
+                        rooms.roomName = roomName
+                        rooms.adress = address
+                        rooms.descriptionOfRoom = description
+                        rooms.client = client
+                        if let url = self.finalUrl {
+                            let urlString = url.absoluteString
+                            rooms.urlString = urlString
+                            //print(rooms.urlString, "/n Hi Dasha/n/n")
+                        }
+                        let realm = try! Realm()
+                        try! realm.write {
+                            realm.add(rooms)
+                        }
+                    }
+                    self.doneButton?.title = "Close"
+                }
+                
+                
+                alertController.addAction(doneAction)
+                // Cancel action
+                let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+                alertController.addAction(cancelAction)
+                
+                // Показываем алерт контроллер
+                present(alertController, animated: true, completion: nil)
+            }
+        }
     }
 
     @IBAction func cancelScanning(_ sender: UIBarButtonItem) {
@@ -82,22 +154,57 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
     // Export the USDZ output by specifying the `.parametric` export option.
     // Alternatively, `.mesh` exports a nonparametric file and `.all`
     // exports both in a single USDZ.
-    @IBAction func exportResults(_ sender: UIButton) {
-        let destinationURL = FileManager.default.temporaryDirectory.appending(path: "Room.usd")
-        do {
-            try finalResults?.export(to: destinationURL, exportOptions: .parametric)
-            
-            let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
-            activityVC.modalPresentationStyle = .popover
-            
-            present(activityVC, animated: true, completion: nil)
-            if let popOver = activityVC.popoverPresentationController {
-                popOver.sourceView = self.exportButton
-            }
-        } catch {
-            print("Error = \(error)")
+   @IBAction func exportResults(_ sender: UIButton) {
+//        let destinationURL = FileManager.default.temporaryDirectory.appending(path: "Room.usdz")
+//        do {
+//            try finalResults?.export(to: destinationURL, exportOptions: .parametric)
+//
+//            let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
+//            activityVC.modalPresentationStyle = .popover
+//
+//
+//            // Save url to current variable
+//
+//
+//            present(activityVC, animated: true, completion: nil)
+//            if let popOver = activityVC.popoverPresentationController {
+//                popOver.sourceView = self.exportButton
+//            }
+//            let finalPath = destinationURL.path
+//               print("Final path: \(finalPath)")
+//
+//               isExport = true
+//
+//
+//        } catch {
+//            print("Error = \(error)")
+//        }
+       let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+       let destinationURL = documentsDirectory.appendingPathComponent("Room.usdz")
+
+       do {
+           try finalResults?.export(to: destinationURL, exportOptions: .parametric)
+
+          
+        let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
+        activityVC.modalPresentationStyle = .popover
+        
+        present(activityVC, animated: true, completion: nil)
+        
+        if let popOver = activityVC.popoverPresentationController {
+            popOver.sourceView = self.exportButton
         }
+        isExport = true
+    } catch {
+        print("Error = \(error)")
     }
+       // Получить путь к сохраненному файлу
+       let filePath = destinationURL.path
+       print("Final Path: \(filePath)")
+    }
+    
+    
+    // Visual options
     
     private func setActiveNavBar() {
         UIView.animate(withDuration: 1.0, animations: {

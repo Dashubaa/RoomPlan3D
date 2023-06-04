@@ -7,7 +7,6 @@ The sample app's main entry point.
 
 import UIKit
 import RoomPlan
-
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 

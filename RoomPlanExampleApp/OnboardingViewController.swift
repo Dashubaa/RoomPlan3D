@@ -6,10 +6,10 @@ A view controller for the app's first screen that explains what to do.
 */
 
 import UIKit
-
+import RealmSwift
 class OnboardingViewController: UIViewController {
     @IBOutlet var existingScanView: UIView!
-
+    
     @IBAction func startScan(_ sender: UIButton) {
         if let viewController = self.storyboard?.instantiateViewController(
             withIdentifier: "RoomCaptureViewNavigationController") {
