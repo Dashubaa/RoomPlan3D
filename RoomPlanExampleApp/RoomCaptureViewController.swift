@@ -8,6 +8,7 @@ The sample app's main view controller that manages the scanning process.
 import UIKit
 import RoomPlan
 import RealmSwift
+import Foundation
 class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, RoomCaptureSessionDelegate {
     let realm = try! Realm()
     @IBOutlet var exportButton: UIButton?
@@ -33,6 +34,7 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
     
     override func viewDidLoad() {
         super.viewDidLoad()
+       
         print("its final result\n\n\n",finalUrl ?? "nil")
         // Set up after loading the view.
         setupRoomCaptureView()
@@ -146,7 +148,7 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
             }
         }
     }
-
+    
     @IBAction func cancelScanning(_ sender: UIBarButtonItem) {
         navigationController?.dismiss(animated: true)
     }
@@ -154,56 +156,46 @@ class RoomCaptureViewController: UIViewController, RoomCaptureViewDelegate, Room
     // Export the USDZ output by specifying the `.parametric` export option.
     // Alternatively, `.mesh` exports a nonparametric file and `.all`
     // exports both in a single USDZ.
-   @IBAction func exportResults(_ sender: UIButton) {
-//        let destinationURL = FileManager.default.temporaryDirectory.appending(path: "Room.usdz")
-//        do {
-//            try finalResults?.export(to: destinationURL, exportOptions: .parametric)
-//
-//            let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
-//            activityVC.modalPresentationStyle = .popover
-//
-//
-//            // Save url to current variable
-//
-//
-//            present(activityVC, animated: true, completion: nil)
-//            if let popOver = activityVC.popoverPresentationController {
-//                popOver.sourceView = self.exportButton
-//            }
-//            let finalPath = destinationURL.path
-//               print("Final path: \(finalPath)")
-//
-//               isExport = true
-//
-//
-//        } catch {
-//            print("Error = \(error)")
-//        }
-       let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-       let destinationURL = documentsDirectory.appendingPathComponent("Room.usdz")
-
-       do {
-           try finalResults?.export(to: destinationURL, exportOptions: .parametric)
-
-          
-        let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
-        activityVC.modalPresentationStyle = .popover
-        
-        present(activityVC, animated: true, completion: nil)
-        
-        if let popOver = activityVC.popoverPresentationController {
-            popOver.sourceView = self.exportButton
+        @IBAction func exportResults(_ sender: UIButton) {
+            let destinationURL = FileManager.default.temporaryDirectory.appending(path: "Room.usdz")
+                do {
+                try finalResults?.export(to: destinationURL, exportOptions: .parametric)
+    
+                let activityVC = UIActivityViewController(activityItems: [destinationURL], applicationActivities: nil)
+                activityVC.modalPresentationStyle = .popover
+                    
+                    activityVC.completionWithItemsHandler = { [weak self] activityType, completed, returnedItems, error in
+                              guard let self = self else {
+                                  return
+                              }
+                              
+                              if completed {
+                                  isExport = true
+                                  finalUrl = destinationURL
+                              } else {
+                                  // Экспорт был отменен или произошла ошибка
+                                  print("Экспорт файла был отменен или произошла ошибка.")
+                                  if let error = error {
+                                      print("Ошибка экспорта: \(error.localizedDescription)")
+                                  }
+                              }
+                          }
+                          
+                           present(activityVC, animated: true, completion: nil)
+                        if let popOver = activityVC.popoverPresentationController {
+                    popOver.sourceView = self.exportButton
+                }
+    
+            
+    
+    
+            } catch {
+                print("Error = \(error)")
+            }
+            
         }
-        isExport = true
-    } catch {
-        print("Error = \(error)")
-    }
-       // Получить путь к сохраненному файлу
-       let filePath = destinationURL.path
-       print("Final Path: \(filePath)")
-    }
     
-    
+           
     // Visual options
     
     private func setActiveNavBar() {

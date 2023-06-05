@@ -7,17 +7,20 @@
 //
 
 import UIKit
-
+import RealmSwift
 class InfoViewController: UIViewController {
-    var selectedIndexPath: IndexPath?
-    @IBOutlet var nameLabel: UILabel!
-    var nameText: String = ""
-    func updateInfo(_ name: String) {
-        self.nameText = name
-        print(nameText)
-    }
+   
+    var infoitem: Room!
+    @IBOutlet var nameOutlet: UILabel!
+    @IBOutlet var clientOutlet: UILabel!
+    @IBOutlet var addressOutlet: UILabel!
+    @IBOutlet var desOutlet: UILabel!
     override func viewDidLoad() {
         super.viewDidLoad()
+        nameOutlet.text = infoitem.roomName ?? "no data"
+        clientOutlet.text = infoitem.client ?? "no data"
+        addressOutlet.text = infoitem.adress ?? "no data"
+        desOutlet.text = infoitem.descriptionOfRoom ?? "no data"
         
         // Do any additional setup after loading the view.
     }
